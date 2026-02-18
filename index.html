@@ -11,257 +11,193 @@
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif}
 
 body{
-background: radial-gradient(circle at top,#1a2a3a,#0b1622);
+background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
 min-height:100vh;
-color:#fff;
 display:flex;
 align-items:center;
 justify-content:center;
-overflow:hidden;
-}
-
-/* كارت */
-.card{
-background:rgba(255,255,255,0.08);
-backdrop-filter:blur(14px);
+color:#fff;
 padding:20px;
-border-radius:25px;
-text-align:center;
-width:95%;
-max-width:420px;
-box-shadow:0 20px 50px rgba(0,0,0,.7);
 }
 
-/* خريطة */
+.card{
+background:rgba(255,255,255,.1);
+backdrop-filter:blur(12px);
+padding:25px;
+border-radius:20px;
+text-align:center;
+box-shadow:0 10px 30px rgba(0,0,0,.4);
+max-width:420px;
+width:100%;
+}
+
+h1{color:#ffd700;margin-bottom:10px}
+button{
+background:#ffd700;border:none;padding:12px 18px;
+border-radius:20px;margin:6px;cursor:pointer;font-size:15px;
+transition:.3s
+}
+button:hover{transform:scale(1.05);background:#ffea00}
+
 .map{
-display:flex;
-flex-wrap:wrap;
+display:grid;
+grid-template-columns:repeat(5,1fr);
 gap:12px;
-justify-content:center;
-margin-top:15px;
-max-height:260px;
+max-height:420px;
 overflow-y:auto;
-padding:5px;
+margin-top:10px;
+padding:10px;
 }
 
 .stage{
-width:65px;
-height:65px;
-border-radius:18px;
-display:flex;
-align-items:center;
-justify-content:center;
-font-size:24px;
-cursor:pointer;
-background:linear-gradient(#b46bff,#7a2bff);
-box-shadow:0 6px 0 #4b0fb3;
-transition:.2s;
-position:relative;
+width:55px;height:55px;border-radius:50%;
+background:#ffffff22;display:flex;align-items:center;
+justify-content:center;cursor:pointer;font-size:20px
 }
 
-.stage.locked{
-background:#444;
-box-shadow:none;
-cursor:not-allowed;
-opacity:.5;
-}
+.locked{opacity:.3;cursor:not-allowed}
 
-/* نجوم المرحلة */
-.stars{
-position:absolute;
-bottom:-10px;
-font-size:12px;
-width:100%;
-text-align:center;
-}
+#timer{font-size:18px;margin:10px}
 
-/* شريط تقدم */
-.progress{
-height:10px;
-background:#333;
-border-radius:10px;
-margin:12px 0;
-overflow:hidden;
-}
-.progress div{
-height:100%;
-background:linear-gradient(90deg,#b46bff,#ffd700);
-transition:.4s;
-}
-
-/* زر */
-button{
-background:linear-gradient(#ffcc70,#ff9f00);
-border:none;
-padding:10px 16px;
-border-radius:14px;
-cursor:pointer;
-margin-top:10px;
-font-weight:bold;
-}
-
-/* مؤثرات */
-.effects span{
-position:fixed;
-font-size:22px;
-animation:fall 3s linear forwards;
-}
-@keyframes fall{
-from{transform:translateY(-50px);opacity:1}
-to{transform:translateY(100vh);opacity:0}
+.celebrate{
+position:fixed;top:0;left:0;width:100%;height:100%;
+pointer-events:none;font-size:24px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="card">
-
-<h2>🌙 رحلة رمضان مع ولاء 💜</h2>
-
-<div class="progress">
-<div id="bar"></div>
+<div class="card" id="home">
+<h1>رمضان كريم يا ولاء 💜🌙</h1>
+<p>أول رمضان مع بعض… وإن شاء الله كل رمضان وإحنا سوا 💜</p>
+<button onclick="startGame()">ابدأ الرحلة</button>
 </div>
 
-<p>النقاط: <span id="points">0</span></p>
-
+<div class="card" id="game" style="display:none">
+<h1>خريطة رمضان</h1>
+<div id="score">النقاط: 0</div>
+<div id="timer"></div>
 <div class="map" id="map"></div>
 
-<div id="questionBox"></div>
-
+<button onclick="randomQuestion()">سؤال رمضاني</button>
+<button onclick="guessNumber()">خمن الرقم</button>
+<button onclick="riddle()">فزورة</button>
 </div>
 
-<div class="effects" id="effects"></div>
-
-<audio id="winSound">
-<source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3" type="audio/mpeg">
-</audio>
+<div class="celebrate" id="celebrate"></div>
 
 <script>
-const stages = ["🌙","🕌","🏮","📖","✨","🎁","🌙","🕌","🏮","📖"];
-const questions = [
+/* ===== بيانات اللعبة ===== */
+let score = Number(localStorage.getItem("score")||0);
+let unlocked = Number(localStorage.getItem("unlocked")||1);
+document.getElementById("score").innerText="النقاط: "+score;
+
+const questions=[
 ["في أي شهر نزل القرآن؟","رمضان"],
 ["كم عدد الصلوات المفروضة؟","5"],
 ["ما الليلة خير من ألف شهر؟","ليلة القدر"],
-["كم عدد أيام رمضان غالبًا؟","30"],
-["ما أول ما نزل من القرآن؟","اقرأ"],
-["ماذا يأتي بعد رمضان؟","العيد"],
-["كم عدد أركان الإسلام؟","5"],
-["ما اسم السورة التي ذكر فيها رمضان؟","البقرة"],
-["ما الصلاة التي تؤدى ليلًا في رمضان؟","التراويح"],
-["كم مرة يصوم المسلم في السنة؟","رمضان"]
+["كم عدد أجزاء القرآن؟","30"],
+["ما اسم أطول سورة؟","البقرة"],
+["ما اسم ملك الوحي؟","جبريل"],
+["كم عدد أبواب الجنة؟","8"],
+["ما أول أركان الإسلام؟","الشهادتان"],
+["كم عدد أيام الأسبوع؟","7"],
+["بماذا يفطر الصائم؟","التمر"]
 ];
 
-let unlocked = Number(localStorage.getItem("ramadanUnlocked")) || 0;
-let points = Number(localStorage.getItem("ramadanPoints")) || 0;
-let starsData = JSON.parse(localStorage.getItem("ramadanStars") || "[]");
-
-/* مؤثرات */
-function showEffect(){
-const box=document.getElementById("effects");
-for(let i=0;i<25;i++){
-const s=document.createElement("span");
-s.innerText=Math.random()>0.5?"💜":"🌙";
-s.style.left=Math.random()*100+"vw";
-box.appendChild(s);
-setTimeout(()=>s.remove(),3000);
-}
+/* ===== بدء اللعبة ===== */
+function startGame(){
+home.style.display="none";
+game.style.display="block";
+drawMap();
 }
 
-/* رسم الخريطة */
-function renderMap(){
-const map=document.getElementById("map");
+/* ===== رسم الخريطة ===== */
+function drawMap(){
 map.innerHTML="";
-
-stages.forEach((icon,i)=>{
-const s=document.createElement("div");
+for(let i=1;i<=30;i++){
+let s=document.createElement("div");
 s.className="stage"+(i>unlocked?" locked":"");
-s.innerText=icon;
-
-if(i<=unlocked) s.onclick=()=>startStage(i);
-
-/* نجوم */
-const starDiv=document.createElement("div");
-starDiv.className="stars";
-starDiv.innerText="⭐".repeat(starsData[i]||0);
-s.appendChild(starDiv);
-
+s.innerText="🌙";
+if(i<=unlocked)s.onclick=()=>playStage(i);
 map.appendChild(s);
-});
-
-document.getElementById("points").innerText=points;
-updateProgress();
+}
 }
 
-/* بدء مرحلة */
-function startStage(i){
-const q=questions[i];
+/* ===== مرحلة ===== */
+function playStage(i){
+let q=questions[Math.floor(Math.random()*questions.length)];
+let time=20;
+timer.innerText="الوقت: "+time;
 
-document.getElementById("questionBox").innerHTML=`
-<p style="margin-top:15px">${q[0]}</p>
-<input id="ans" style="padding:8px;border-radius:10px;border:none;width:90%;margin-top:8px">
-<br>
-<button onclick="checkAnswer(${i})">تأكيد</button>
-`;
-}
+let interval=setInterval(()=>{
+time--;
+timer.innerText="الوقت: "+time;
+if(time<=0){clearInterval(interval);alert("انتهى الوقت ⏰");}
+},1000);
 
-/* تحقق الإجابة */
-function checkAnswer(i){
-const val=document.getElementById("ans").value.trim();
+let ans=prompt(q[0]);
+clearInterval(interval);
 
-if(val===questions[i][1]){
-points+=10;
-
-/* نجوم عشوائية جميلة */
-const stars = Math.floor(Math.random()*3)+1;
-starsData[i]=stars;
-
-document.getElementById("winSound").play();
-showEffect();
-
-if(i===unlocked) unlocked++;
-
-saveData();
-renderMap();
-
-if(unlocked===stages.length) winGame();
-
-document.getElementById("questionBox").innerHTML="";
+if(ans===q[1]){
+score+=10;
+unlocked=Math.max(unlocked,i+1);
+save();
+celebrate();
+alert("إجابة صحيحة 💜");
 }else{
-alert("إجابة خاطئة ❌");
+alert("إجابة خاطئة");
+}
+
+updateUI();
+}
+
+/* ===== ألعاب جانبية ===== */
+function randomQuestion(){
+let q=questions[Math.floor(Math.random()*questions.length)];
+if(prompt(q[0])===q[1]){score+=5;celebrate();updateUI();}
+}
+
+function guessNumber(){
+let n=Math.floor(Math.random()*5)+1;
+if(Number(prompt("خمن رقم من 1 إلى 5"))===n){score+=5;celebrate();}
+updateUI();
+}
+
+function riddle(){
+if(prompt("شيء يظهر ليلًا ويختفي نهارًا؟")==="القمر"){
+score+=5;celebrate();
+}
+updateUI();
+}
+
+/* ===== احتفال ===== */
+function celebrate(){
+for(let i=0;i<25;i++){
+let e=document.createElement("div");
+e.innerText=Math.random()>.5?"💜":"✨";
+e.style.position="absolute";
+e.style.left=Math.random()*100+"%";
+e.style.top=Math.random()*100+"%";
+celebrateBox.appendChild(e);
+setTimeout(()=>e.remove(),1500);
 }
 }
 
-/* حفظ */
-function saveData(){
-localStorage.setItem("ramadanUnlocked",unlocked);
-localStorage.setItem("ramadanPoints",points);
-localStorage.setItem("ramadanStars",JSON.stringify(starsData));
+/* ===== حفظ ===== */
+function save(){
+localStorage.setItem("score",score);
+localStorage.setItem("unlocked",unlocked);
 }
 
-/* تقدم */
-function updateProgress(){
-const percent=(unlocked/stages.length)*100;
-document.getElementById("bar").style.width=percent+"%";
+/* ===== تحديث ===== */
+function updateUI(){
+document.getElementById("score").innerText="النقاط: "+score;
+drawMap();
 }
 
-/* نهاية */
-function winGame(){
-document.getElementById("questionBox").innerHTML=`
-<h3>🎉 مبروك يا ولاء 💜</h3>
-<p>أنهيتي رحلة رمضان بالكامل</p>
-<p>مجموع النقاط: ${points}</p>
-<button onclick="resetGame()">إعادة اللعب</button>
-`;
-}
-
-/* إعادة */
-function resetGame(){
-localStorage.clear();
-location.reload();
-}
-
-renderMap();
+const celebrateBox=document.getElementById("celebrate");
 </script>
 
 </body>
