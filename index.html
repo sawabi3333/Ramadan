@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>رحلة رمضان مع ولاء 💜</title>
+<title>قصة رمضان مع ولاء 💜</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
 
@@ -11,193 +11,203 @@
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif}
 
 body{
-background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+background: radial-gradient(circle at top,#1a2a3a,#000);
 min-height:100vh;
 display:flex;
 align-items:center;
 justify-content:center;
 color:#fff;
-padding:20px;
+overflow:hidden;
 }
 
+/* البطاقة */
 .card{
-background:rgba(255,255,255,.1);
-backdrop-filter:blur(12px);
-padding:25px;
-border-radius:20px;
+background:rgba(255,255,255,0.08);
+backdrop-filter:blur(16px);
+padding:28px;
+border-radius:25px;
 text-align:center;
-box-shadow:0 10px 30px rgba(0,0,0,.4);
+width:90%;
 max-width:420px;
-width:100%;
+box-shadow:0 25px 50px rgba(0,0,0,.7);
+transition:all .8s ease;
+opacity:1;
+transform:scale(1);
 }
 
-h1{color:#ffd700;margin-bottom:10px}
+.fade-out{
+opacity:0;
+transform:scale(.9) rotateY(20deg);
+}
+
+h1{color:#ffd700;margin-bottom:12px;font-size:1.8rem}
+p{line-height:1.9;margin:15px 0;font-size:1.05rem}
+
 button{
-background:#ffd700;border:none;padding:12px 18px;
-border-radius:20px;margin:6px;cursor:pointer;font-size:15px;
-transition:.3s
+background:linear-gradient(180deg,#ffe066,#ffb700);
+border:none;
+padding:12px 20px;
+border-radius:16px;
+font-weight:bold;
+cursor:pointer;
+margin:6px;
+transition:.25s;
+box-shadow:0 6px 15px rgba(0,0,0,.4);
 }
-button:hover{transform:scale(1.05);background:#ffea00}
+button:hover{transform:scale(1.08)}
 
-.map{
-display:grid;
-grid-template-columns:repeat(5,1fr);
-gap:12px;
-max-height:420px;
-overflow-y:auto;
-margin-top:10px;
-padding:10px;
+/* مؤثرات السقوط */
+.effect{
+position:fixed;
+font-size:22px;
+animation:fall 2.2s linear forwards;
+pointer-events:none;
+z-index:999;
 }
 
-.stage{
-width:55px;height:55px;border-radius:50%;
-background:#ffffff22;display:flex;align-items:center;
-justify-content:center;cursor:pointer;font-size:20px
+@keyframes fall{
+from{transform:translateY(-40px) scale(.8);opacity:1}
+to{transform:translateY(100vh) scale(1.2);opacity:0}
 }
 
-.locked{opacity:.3;cursor:not-allowed}
+/* شاشة النهاية بالنجوم */
+#finalStars{
+position:fixed;
+inset:0;
+background:#000;
+display:none;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+z-index:9999;
+animation:fadeIn 2s ease;
+}
 
-#timer{font-size:18px;margin:10px}
+.starText{
+font-size:2.5rem;
+color:#fff;
+letter-spacing:6px;
+animation:glow 2s infinite alternate;
+}
 
-.celebrate{
-position:fixed;top:0;left:0;width:100%;height:100%;
-pointer-events:none;font-size:24px;
+@keyframes glow{
+from{text-shadow:0 0 10px #fff,0 0 20px #a020f0}
+to{text-shadow:0 0 25px #fff,0 0 50px #a020f0}
+}
+
+@keyframes fadeIn{
+from{opacity:0}
+to{opacity:1}
 }
 </style>
 </head>
-
 <body>
 
-<div class="card" id="home">
-<h1>رمضان كريم يا ولاء 💜🌙</h1>
-<p>أول رمضان مع بعض… وإن شاء الله كل رمضان وإحنا سوا 💜</p>
-<button onclick="startGame()">ابدأ الرحلة</button>
+<div class="card" id="card">
+<h1 id="title">🌙 بداية الحكاية</h1>
+<p id="text">في ليلة جميلة من ليالي رمضان… كنت بفكر في أغلى إنسانة في حياتي 💜</p>
+<div id="choices">
+<button onclick="goScene(1)">مين هي؟</button>
+</div>
 </div>
 
-<div class="card" id="game" style="display:none">
-<h1>خريطة رمضان</h1>
-<div id="score">النقاط: 0</div>
-<div id="timer"></div>
-<div class="map" id="map"></div>
-
-<button onclick="randomQuestion()">سؤال رمضاني</button>
-<button onclick="guessNumber()">خمن الرقم</button>
-<button onclick="riddle()">فزورة</button>
+<!-- شاشة النهاية -->
+<div id="finalStars">
+<div class="starText">✨ ولاء ✨</div>
+<p style="margin-top:20px;color:#ffd700">
+أول رمضان مع بعض… ولآخر العمر بإذن الله 💜
+</p>
 </div>
-
-<div class="celebrate" id="celebrate"></div>
 
 <script>
-/* ===== بيانات اللعبة ===== */
-let score = Number(localStorage.getItem("score")||0);
-let unlocked = Number(localStorage.getItem("unlocked")||1);
-document.getElementById("score").innerText="النقاط: "+score;
-
-const questions=[
-["في أي شهر نزل القرآن؟","رمضان"],
-["كم عدد الصلوات المفروضة؟","5"],
-["ما الليلة خير من ألف شهر؟","ليلة القدر"],
-["كم عدد أجزاء القرآن؟","30"],
-["ما اسم أطول سورة؟","البقرة"],
-["ما اسم ملك الوحي؟","جبريل"],
-["كم عدد أبواب الجنة؟","8"],
-["ما أول أركان الإسلام؟","الشهادتان"],
-["كم عدد أيام الأسبوع؟","7"],
-["بماذا يفطر الصائم؟","التمر"]
+const scenes=[
+{
+title:"💜 ولاء",
+text:"هي ولاء… النور اللي بيخلّي أي يوم عادي يبقى عيد 🌙",
+choices:[{t:"كمّل الحكاية",n:2}]
+},
+{
+title:"🌙 أول رمضان مع بعض",
+text:"أول رمضان وإحنا سوا… وكل دعوة كنت بتمنّاها لقيتِك فيها 💜",
+choices:[
+{t:"أقول الحقيقة",n:3},
+{t:"أفضل ساكت",n:4}
+]
+},
+{
+title:"✨ الحقيقة",
+text:"وجودك في حياتي هو أجمل رزق من ربنا… وكل سنة وإنتِ معايا 💜",
+choices:[{t:"النهاية",n:5}]
+},
+{
+title:"🤍 السكوت",
+text:"حتى لو ما اتكلمتش… قلبي بيدعي لك في كل صلاة 🌙",
+choices:[{t:"النهاية",n:5}]
+},
+{
+title:"💜 رسالة رمضان",
+text:"تقبل الله منا ومنكم صالح الأعمال… وأتمنى يكون ده أول رمضان مع بعض ولآخر العمر 💜",
+choices:[]
+}
 ];
 
-/* ===== بدء اللعبة ===== */
-function startGame(){
-home.style.display="none";
-game.style.display="block";
-drawMap();
-}
+function goScene(i){
+const card=document.getElementById("card");
+card.classList.add("fade-out");
 
-/* ===== رسم الخريطة ===== */
-function drawMap(){
-map.innerHTML="";
-for(let i=1;i<=30;i++){
-let s=document.createElement("div");
-s.className="stage"+(i>unlocked?" locked":"");
-s.innerText="🌙";
-if(i<=unlocked)s.onclick=()=>playStage(i);
-map.appendChild(s);
-}
-}
+setTimeout(()=>{
+const s=scenes[i];
 
-/* ===== مرحلة ===== */
-function playStage(i){
-let q=questions[Math.floor(Math.random()*questions.length)];
-let time=20;
-timer.innerText="الوقت: "+time;
+document.getElementById("title").innerText=s.title;
+document.getElementById("text").innerText=s.text;
 
-let interval=setInterval(()=>{
-time--;
-timer.innerText="الوقت: "+time;
-if(time<=0){clearInterval(interval);alert("انتهى الوقت ⏰");}
-},1000);
+const box=document.getElementById("choices");
+box.innerHTML="";
 
-let ans=prompt(q[0]);
-clearInterval(interval);
-
-if(ans===q[1]){
-score+=10;
-unlocked=Math.max(unlocked,i+1);
-save();
-celebrate();
-alert("إجابة صحيحة 💜");
+if(s.choices.length===0){
+setTimeout(showFinal,1200);
 }else{
-alert("إجابة خاطئة");
+s.choices.forEach(c=>{
+const b=document.createElement("button");
+b.innerText=c.t;
+b.onclick=()=>goScene(c.n);
+box.appendChild(b);
+});
 }
 
-updateUI();
+card.classList.remove("fade-out");
+showEffects();
+
+},700);
 }
 
-/* ===== ألعاب جانبية ===== */
-function randomQuestion(){
-let q=questions[Math.floor(Math.random()*questions.length)];
-if(prompt(q[0])===q[1]){score+=5;celebrate();updateUI();}
-}
-
-function guessNumber(){
-let n=Math.floor(Math.random()*5)+1;
-if(Number(prompt("خمن رقم من 1 إلى 5"))===n){score+=5;celebrate();}
-updateUI();
-}
-
-function riddle(){
-if(prompt("شيء يظهر ليلًا ويختفي نهارًا؟")==="القمر"){
-score+=5;celebrate();
-}
-updateUI();
-}
-
-/* ===== احتفال ===== */
-function celebrate(){
-for(let i=0;i<25;i++){
-let e=document.createElement("div");
-e.innerText=Math.random()>.5?"💜":"✨";
-e.style.position="absolute";
-e.style.left=Math.random()*100+"%";
-e.style.top=Math.random()*100+"%";
-celebrateBox.appendChild(e);
-setTimeout(()=>e.remove(),1500);
+/* مؤثرات القلوب والهلال */
+function showEffects(){
+for(let i=0;i<18;i++){
+const e=document.createElement("div");
+e.className="effect";
+e.innerText=Math.random()>0.5?"💜":"🌙";
+e.style.left=Math.random()*100+"vw";
+document.body.appendChild(e);
+setTimeout(()=>e.remove(),2200);
 }
 }
 
-/* ===== حفظ ===== */
-function save(){
-localStorage.setItem("score",score);
-localStorage.setItem("unlocked",unlocked);
-}
+/* النهاية بالنجوم */
+function showFinal(){
+document.getElementById("card").style.display="none";
+const f=document.getElementById("finalStars");
+f.style.display="flex";
 
-/* ===== تحديث ===== */
-function updateUI(){
-document.getElementById("score").innerText="النقاط: "+score;
-drawMap();
+for(let i=0;i<60;i++){
+const star=document.createElement("div");
+star.className="effect";
+star.innerText="✨";
+star.style.left=Math.random()*100+"vw";
+star.style.animationDuration=(2+Math.random()*2)+"s";
+f.appendChild(star);
 }
-
-const celebrateBox=document.getElementById("celebrate");
+}
 </script>
 
 </body>
